@@ -1,7 +1,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context="org.openhab_node.bootstrapopenhabnodes.DetectActivity">
+    tools:context="org.libBSTbootstrap.activities.DetectAndBindActivity">
     <item
         android:id="@+id/action_add_openhab_server"
         android:orderInCategory="100"

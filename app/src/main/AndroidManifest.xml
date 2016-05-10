@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.openhab_node.bootstrapopenhabnodes">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="org.openhab.bootstrap">
 
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
@@ -11,13 +12,15 @@
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
 
     <application
+        android:name="org.openhab.bootstrap.App"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        tools:ignore="AllowBackup,GoogleAppIndexingWarning">
         <activity
-            android:name=".DetectActivity"
+            android:name="org.openhab.detectServers.OpenHABActivity"
             android:label="@string/app_name"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
@@ -25,18 +28,23 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="next_activity" android:value="org.libBSTbootstrap.activities.DetectAndBindActivity" />
         </activity>
+
         <activity
-            android:name=".DestinationNetworkActivity"
+            android:name="org.libBSTbootstrap.activities.DestinationNetworkActivity"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name=".ConfigureNodesActivity"
+            android:name="org.libBSTbootstrap.activities.BootstrapActivity"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name="org.libBSTbootstrap.activities.DetectAndBindActivity"
             android:theme="@style/AppTheme.NoActionBar" />
 
         <service
-            android:name=".bootstrap.BootstrapService"
+            android:name="org.libBSTbootstrap.BootstrapService"
             android:enabled="true"
-            android:exported="false"></service>
+            android:exported="false"/>
     </application>
 
 </manifest>
