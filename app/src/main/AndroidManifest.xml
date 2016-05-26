@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="org.openhab.bootstrap">
+    package="org.openhab_nodes.bootstrap">
 
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
@@ -12,39 +12,33 @@
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
 
     <application
-        android:name="org.openhab.bootstrap.App"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="AllowBackup,GoogleAppIndexingWarning">
+
         <activity
-            android:name="org.openhab.detectServers.OpenHABActivity"
-            android:label="@string/app_name"
+            android:name="org.openhab_nodes.IntroductionActivity"
+            android:label="@string/title_activity_introduction"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <meta-data android:name="next_activity" android:value="org.libBSTbootstrap.activities.DetectAndBindActivity" />
         </activity>
 
         <activity
-            android:name="org.libBSTbootstrap.activities.DestinationNetworkActivity"
-            android:theme="@style/AppTheme.NoActionBar" />
-        <activity
-            android:name="org.libBSTbootstrap.activities.BootstrapActivity"
-            android:theme="@style/AppTheme.NoActionBar" />
-        <activity
-            android:name="org.libBSTbootstrap.activities.DetectAndBindActivity"
-            android:theme="@style/AppTheme.NoActionBar" />
+            android:name="org.openhab_nodes.OpenHABActivity"
+            android:label="@string/app_name"
+            android:theme="@style/AppTheme.NoActionBar"></activity>
 
-        <service
-            android:name="org.libBSTbootstrap.BootstrapService"
-            android:enabled="true"
-            android:exported="false"/>
+        <activity
+            android:name="org.openhab_nodes.PrepareBootstrapActivity"
+            android:label="@string/app_name"
+            android:theme="@style/AppTheme.NoActionBar"></activity>
     </application>
+    s
 
 </manifest>

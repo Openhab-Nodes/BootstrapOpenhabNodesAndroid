@@ -2,8 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/BootstrapOpenhabNodes.iml" filepath="$PROJECT_DIR$/BootstrapOpenhabNodes.iml" />
+      <module fileurl="file://$PROJECT_DIR$/BootstrapOpenhabNodesAndroid.iml" filepath="$PROJECT_DIR$/BootstrapOpenhabNodesAndroid.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libbootstrapiotdevice/libbootstrapiotdevice.iml" filepath="$PROJECT_DIR$/libbootstrapiotdevice/libbootstrapiotdevice.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libopenhabandroid/libopenhabandroid.iml" filepath="$PROJECT_DIR$/libopenhabandroid/libopenhabandroid.iml" />
+      <module fileurl="file://$PROJECT_DIR$/memorizingtrustmanager/memorizingtrustmanager.iml" filepath="$PROJECT_DIR$/memorizingtrustmanager/memorizingtrustmanager.iml" />
     </modules>
   </component>
 </project>

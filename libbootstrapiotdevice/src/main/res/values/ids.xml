@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="unbound_key" type="string">bst_default</item>
+    <string name="access_point_key">bootstrap_key</string>
+    <string name="access_point_ssid">Bootstrap_BST_v1</string>
+</resources>

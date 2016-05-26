@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">LibOpenhabAndroid</string>
+    <string name="activity_detect_title">Detect OpenHab Servers</string>
+    <string name="action_add_openhab_server">Enter Server IP manually</string>
+    <string name="permission_rationale_location">To get a list available wifi stations around you, the location permission is required. Allow?</string>
+    <string name="openhab_server_password">Optional password</string>
+    <string name="openhab_server_uri">Server address</string>
+    <string name="openhab_test_server">Test</string>
+    <string name="openhab_no_password">No password</string>
+    <string name="openhab_server_username">Optional username</string>
+    <string name="no_servers_found">No servers found so far. You may add one manually.</string>
+    <string name="wifi_signal_strength">Wifi signal strength</string>
+    <string name="no_openhab_servers_found">No OpenHab servers automatically found so far. Your network will be searched again in 30s. Make sure you use an up-to-date OpenHab 2 Server with mDNS enabled.</string>
+    <string name="openhab_server_port">Port</string>
+    <string name="test_server_hint">Please test now if the server can be accessed and enter credentials if necessary</string>
+    <string name="openhab_server_details">Password: %1$s\nProtocol: %2$s\nSitemaps: %3$d\nThings: %4$d\nItems: %5$d</string>
+    <string-array name="httphttps">
+        <item>https</item>
+        <item>http</item>
+    </string-array>
+    <string name="title_activity_edit_server">EditServerActivity</string>
+    <string name="btnTest">Test</string>
+</resources>

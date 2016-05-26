@@ -1,17 +1,9 @@
 <resources>
     <string name="app_name">Bootstrap Openhab Nodes</string>
-    <string name="action_add_openhab_server">Enter Server IP manually</string>
     <string name="permission_rationale_location">To get a list available wifi stations around you, the location permission is required. Allow?</string>
     <string name="permission_rationale_write_settings">On Android 6.0 you need the "Write to System Settings" permission for routing network packets to a specific wireless network. Allow?</string>
     <string name="device_entry_bound">%1$s (Bound)</string>
     <string name="network_entry">Available from %1$d of %2$d devices</string>
-    <string name="openhab_server_password">Optional password</string>
-    <string name="openhab_server_uri">Server address</string>
-    <string name="wifi_signal_strength">Wifi signal strength</string>
-    <string name="openhab_test_server">Test</string>
-    <string name="openhab_no_password">No password</string>
-    <string name="openhab_password">Password %1$s</string>
-    <string name="openhab_server_username">Optional username</string>
     <string name="no_devices_found">No devices found so far.</string>
     <string name="no_servers_found">No servers found so far. You may add one manually.</string>
     <string name="bs_device_state_detected">Not selected for bootstrap</string>
@@ -41,4 +33,27 @@
     <string name="error_binding_failed">Binding failed</string>
     <string name="bs_device_state_wait_for_welcome">Wait for welcome</string>
     <string name="request_wifi_networks">Request wifi networks</string>
+    <string name="title_activity_introduction">Openhab Nodes</string>
+    <string name="action_settings">Settings</string>
+    <string name="introduction_text"><![CDATA[
+    <h2>Hello</h2>
+    <p>We will now setup your <b>OpenHab Nodes</b> to make them connect to your home network and
+    talk to your OpenHab Server. If you protected your server by a username/password,
+    you will be asked for your credentials in the process.</p>
+    <center><img src="openhab.png" /></center></p>]]></string>
+    <string name="subtitle_activity_introduction">Initial configuration of your nodes</string>
+    <string name="introduction_text_part2"><![CDATA[
+    We now have to temporary disconnect you
+    from your home network and open up an access point to search for nodes. If you leave
+    the app within or after this process, your connection to your home network will be restored.]]></string>
+    <string name="btnNext">Next</string>
+    <string name="btnAdd">Add Server</string>
+    <string name="btnNeedPermission">Request permissions</string>
+    <string name="part_of_this_network">part of this network,</string>
+    <string name="not_yet_assoziated_to_a_network">not yet associated to a network.</string>
+    <string name="txtSetupAP">We now have to temporary disconnect you from your home network and open up an access point to search for nodes. If you leave the app within or after this process, your connection to your home network will be restored.</string>
+    <string name="android6_permission_required">On <b>Android 6.0+</b> you need the WRITE_SETTINGS permission to instantiate an access point.</string>
+    <string name="txtFailedSetupAP">We failed to setup an access point. Please create one with the SSID \'%1$s\' and a password \'%2$s\' and click next.</string>
+    <string name="service_not_ready">Service not ready</string>
+    <string name="nodes_are">Nodes are …</string>
 </resources>
