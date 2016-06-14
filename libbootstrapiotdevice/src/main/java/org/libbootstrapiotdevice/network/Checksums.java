@@ -17,32 +17,22 @@ public class Checksums {
      * @return Return the checksum as int16.
      */
     static int GenerateChecksumCRC16(byte bytes[], int offset) {
-
-        int crc = 0xFFFF;
-        int temp;
+        int crc = 0xFFFF;          // initial value
+        int polynomial = 0x1021;   // 0001 0000 0010 0001  (0, 5, 12)
         int crc_byte;
 
-        for (int i = offset; i < bytes.length; ++i) {
-            crc_byte = bytes[i];
+        for (int j = offset; j < bytes.length; ++j) {
+            crc_byte = bytes[j];
 
-            for (int bit_index = 0; bit_index < 8; bit_index++) {
-
-                temp = ((crc >> 15)) ^ ((crc_byte >> 7));
-
+            for (int i = 0; i < 8; i++) {
+                boolean bit = ((crc_byte >> (7 - i) & 1) == 1);
+                boolean c15 = ((crc >> 15 & 1) == 1);
                 crc <<= 1;
-                crc &= 0xFFFF;
-
-                if (temp > 0) {
-                    crc ^= 0x1021;
-                    crc &= 0xFFFF;
-                }
-
-                crc_byte <<= 1;
-                crc_byte &= 0xFF;
-
+                if (c15 ^ bit) crc ^= polynomial;
             }
         }
 
+        crc &= 0xffff;
         return crc;
     }
 }

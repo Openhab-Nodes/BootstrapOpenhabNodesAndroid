@@ -15,9 +15,7 @@ import org.libbootstrapiotdevice.network.spritzJ.SpritzState;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,20 +23,20 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * A communication object for communicating with devices that use a compatible
+ * The communication object that implements the communication protocol for devices that use a compatible
  * bootstrap firmware. No network related functionality included. This class implements
  * {@see org.libbootstrapiotdevice.network.IUDPNetworkReceive}
- * to act as a receiver for a network class and this class uses
+ * to act as a receiver for a network class and uses the interface
  * {@see org.libbootstrapiotdevice.network.IUDPNetwork}, set with setNetwork, to send
  * encrypted data packages.
  */
-public class BootstrapDevices implements IUDPNetworkReceive, Handler.Callback {
+public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
     public static final int RECEIVE_PORT = 8711;
     public static final int SEND_PORT = 8711;
     ///// Encryption related /////
     final static public int BST_NONCE_SIZE = 8;
     final static public int BST_UID_SIZE = 6;
-    final static public int BST_BINDKEY_MAX_SIZE = 32;
+    final static public int BST_CRYPTO_KEY_MAX_SIZE = 32;
     final static public int BST_CHECKSUM_SIZE = 2;
     // Async
     final static int MSG_DETECT = 1;
@@ -50,17 +48,16 @@ public class BootstrapDevices implements IUDPNetworkReceive, Handler.Callback {
     protected static byte[] header = "BSTwifi1".getBytes();
     public static int protocol_header_len = header.length + BST_CHECKSUM_SIZE + 1;
     // Debug
-    private static String TAG = "BootstrapDevices";
+    private static String TAG = "BootstrapCore";
     ////// Network related /////
     protected ByteArrayOutputStream sendStream = new ByteArrayOutputStream(1024);
-    byte[] bound_key = new byte[BST_BINDKEY_MAX_SIZE];
+    byte[] bound_key = new byte[BST_CRYPTO_KEY_MAX_SIZE];
     int bound_key_len = 0;
     // Device list
     private List<BootstrapDevice> devices = new ArrayList<>();
     private List<BootstrapDeviceUpdateListener> changeListener = new ArrayList<>();
     private IUDPNetwork network;
-    private InetAddress multicastGroup;
-    private byte[] unbound_key = new byte[BST_BINDKEY_MAX_SIZE];
+    private byte[] unbound_key = new byte[BST_CRYPTO_KEY_MAX_SIZE];
     private byte[] app_nonce = new byte[BST_NONCE_SIZE];
     private int unbound_key_len = 0;
     private Random random = new Random();
@@ -84,24 +81,19 @@ public class BootstrapDevices implements IUDPNetworkReceive, Handler.Callback {
      * @param unbound_key       The key that is initially used for the app<-->device communication.
      * @param current_ssid      If the app spans an access point to let devices connect to it, provide
      */
-    public BootstrapDevices(@Nullable Handler overwrite_handler, byte[] bound_key, byte[] unbound_key,
-                            String current_ssid) {
+    public BootstrapCore(@Nullable Handler overwrite_handler, byte[] bound_key, byte[] unbound_key,
+                         String current_ssid) {
         this.handler = overwrite_handler != null ? overwrite_handler : new Handler(Looper.myLooper(), this);
         this.current_ssid = current_ssid;
         unbound_key_len = unbound_key.length;
         bound_key_len = bound_key.length;
 
-        if (unbound_key_len > BST_BINDKEY_MAX_SIZE || bound_key_len > BST_BINDKEY_MAX_SIZE) {
+        if (unbound_key_len > BST_CRYPTO_KEY_MAX_SIZE || bound_key_len > BST_CRYPTO_KEY_MAX_SIZE) {
             throw new RuntimeException("Key too long!");
         }
 
         System.arraycopy(unbound_key, 0, this.unbound_key, 0, unbound_key_len);
         System.arraycopy(bound_key, 0, this.bound_key, 0, bound_key_len);
-
-        try {
-            multicastGroup = InetAddress.getByName("239.0.0.57");
-        } catch (UnknownHostException ignored) {
-        }
 
         generateAppNonce();
     }
@@ -190,6 +182,9 @@ public class BootstrapDevices implements IUDPNetworkReceive, Handler.Callback {
         }
     }
 
+    /**
+     * Clear all devices to restart from scratch.
+     */
     @SuppressWarnings("unused")
     public void clearDevices() {
         devices.clear();
@@ -198,10 +193,19 @@ public class BootstrapDevices implements IUDPNetworkReceive, Handler.Callback {
         }
     }
 
+    /**
+     * Get notified of device changes.
+     *
+     * @param changeListener Your listener
+     */
     public void addChangeListener(BootstrapDeviceUpdateListener changeListener) {
         this.changeListener.add(changeListener);
     }
 
+    /**
+     * Don't get any further notifications for device changes.
+     * @param changeListener Your listener
+     */
     public void removeChangeListener(BootstrapDeviceUpdateListener changeListener) {
         this.changeListener.remove(changeListener);
     }
@@ -229,7 +233,7 @@ public class BootstrapDevices implements IUDPNetworkReceive, Handler.Callback {
         System.arraycopy(crc, 0, data, header.length, BST_CHECKSUM_SIZE);
 
         if (device == null) {
-            return network.send(SEND_PORT, multicastGroup, data);
+            return network.send(SEND_PORT, null, data);
         } else {
             device.cipherEncrypt(data, protocol_header_len);
             return network.send(SEND_PORT, device.address, data);
@@ -378,6 +382,19 @@ public class BootstrapDevices implements IUDPNetworkReceive, Handler.Callback {
             return;
         }
 
+//        String str = "byte msg[] = ";
+//        for(byte b: message)
+//            str += String.valueOf((int)b)+",";
+//        Log.w(TAG, str);
+//        str = "byte app_nonce = ";
+//        for(byte b: app_nonce)
+//            str += String.valueOf((int)b)+",";
+//        Log.w(TAG, str);
+//        str = "byte unbound_key_len = ";
+//        for(int i=0;i<unbound_key_len;++i)
+//            str += String.valueOf((int)unbound_key[i])+",";
+//        Log.w(TAG, str);
+
         byte crc[] = extractCRC(message);
         DeviceState state = extractState(message);
 
@@ -476,12 +493,16 @@ public class BootstrapDevices implements IUDPNetworkReceive, Handler.Callback {
             WirelessNetwork network = new WirelessNetwork();
             network.strength = inputStream.read();
             temp = inputStream.read();
-            if (network.strength < 0 || network.strength > 100 ||
-                    temp > WirelessNetwork.EncryptionMode.values().length) {
+            if (network.strength < 0 || network.strength > 100) {
                 Log.e(TAG, "Parsing error for RSP_WIFI_LIST " + String.valueOf(network.strength) + " " + String.valueOf(temp));
                 break;
             }
-            network.mode = WirelessNetwork.EncryptionMode.values()[temp];
+
+            if (temp > 0 && temp < WirelessNetwork.EncryptionMode.values().length)
+                network.mode = WirelessNetwork.EncryptionMode.values()[temp];
+            else
+                network.mode = WirelessNetwork.EncryptionMode.Unknown;
+
             // Look for next \0 character
             temp = 0;
             inputStream.mark(0);
@@ -557,5 +578,10 @@ public class BootstrapDevices implements IUDPNetworkReceive, Handler.Callback {
         }
         Message msg = handler.obtainMessage(MSG_BIND_OR_UPDATE, index, 0, device);
         handler.sendMessage(msg);
+    }
+
+    public void setUnboundKey(byte[] unboundKey) {
+        this.unbound_key = unboundKey;
+        this.unbound_key_len = unboundKey.length;
     }
 }

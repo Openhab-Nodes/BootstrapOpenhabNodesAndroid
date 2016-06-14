@@ -23,13 +23,14 @@ import android.widget.TextView;
 import org.libbootstrapiotdevice.BootstrapData;
 import org.libbootstrapiotdevice.BootstrapDevice;
 import org.libbootstrapiotdevice.BootstrapService;
+import org.libbootstrapiotdevice.NetworkConnectivityResponse;
 import org.libbootstrapiotdevice.R;
 import org.libbootstrapiotdevice.WirelessNetwork;
 import org.libbootstrapiotdevice.adapter.OverlappingNetworksAdapter;
 import org.libbootstrapiotdevice.adapter.onSelectionChange;
 
 public class DestinationNetworkActivity extends AppCompatActivity
-        implements ServiceConnection, onSelectionChange, View.OnClickListener, BootstrapService.Callback {
+        implements ServiceConnection, onSelectionChange, View.OnClickListener, NetworkConnectivityResponse.Callback {
     Button btnOK;
     Button btnRetry;
     Toolbar toolbar;
@@ -110,7 +111,7 @@ public class DestinationNetworkActivity extends AppCompatActivity
         BootstrapService.LocalBinder binder = (BootstrapService.LocalBinder) service;
         mService = binder.getService();
 
-        for (BootstrapDevice device : mService.getBootstrapDevices().getDevices()) {
+        for (BootstrapDevice device : mService.getBootstrapCore().getDevices()) {
             mAdapter.addDevice(device);
         }
     }

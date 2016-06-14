@@ -13,6 +13,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import org.libbootstrapiotdevice.BootstrapService;
+import org.libbootstrapiotdevice.NetworkConnectivityResponse;
 import org.libbootstrapiotdevice.R;
 import org.libbootstrapiotdevice.adapter.onSelectionChange;
 import org.libbootstrapiotdevice.network.BootstrapDeviceUpdateListener;
@@ -86,17 +87,17 @@ public class DetectAndBindActivity extends AppCompatActivity implements Bootstra
         final Snackbar snackbar = Snackbar.make(btnOK, R.string.setup_ap, Snackbar.LENGTH_INDEFINITE);
 
         final BootstrapService service = utils.getService();
-        if (!service.isSameNetwork()) {
+        if (!service.isBootstrapInSameNetwork()) {
             if (WifiUtils.checkWifiAP(this, service.getAccessPointSsid(), service.getAccessPointKey())) {
                 service.takeOverAP(this);
             } else {
                 snackbar.show();
-                service.startWifiAP(this, new BootstrapService.Callback() {
+                service.startWifiAP(this, new NetworkConnectivityResponse.Callback() {
                     @Override
                     public void wifiSuccess(boolean success) {
                         if (success) {
                             snackbar.dismiss();
-                            if (!service.getBootstrapDevices().detectDevices())
+                            if (!service.getBootstrapCore().detectDevices())
                                 deviceChangesFinished();
                         } else {
                             snackbar.dismiss();
@@ -111,7 +112,7 @@ public class DetectAndBindActivity extends AppCompatActivity implements Bootstra
             }
         }
 
-        if (!service.getBootstrapDevices().detectDevices())
+        if (!service.getBootstrapCore().detectDevices())
             deviceChangesFinished();
     }
 
@@ -150,7 +151,7 @@ public class DetectAndBindActivity extends AppCompatActivity implements Bootstra
 
     @Override
     public void onBootstrapServiceReady() {
-        utils.getService().getBootstrapDevices().addChangeListener(this);
+        utils.getService().getBootstrapCore().addChangeListener(this);
         startProcess();
     }
 }

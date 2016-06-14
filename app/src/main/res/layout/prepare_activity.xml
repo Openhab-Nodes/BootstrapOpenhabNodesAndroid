@@ -65,6 +65,7 @@
                     android:text="@string/part_of_this_network" />
 
                 <RadioButton
+                    android:id="@+id/radioNotAssociatedNetwork"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/not_yet_assoziated_to_a_network" />

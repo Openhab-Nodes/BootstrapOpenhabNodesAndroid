@@ -19,26 +19,17 @@ import android.widget.RadioButton;
 import android.widget.TextView;
 
 import org.libbootstrapiotdevice.BootstrapService;
+import org.libbootstrapiotdevice.NetworkConnectivityResponse;
 import org.libbootstrapiotdevice.activities.DetectAndBindActivity;
 import org.libbootstrapiotdevice.network.WifiUtils;
 import org.openhab_nodes.bootstrap.R;
 
 /**
- * Shows an activity with a text, a help button and a next button.
- * You have to customize these with via the calling intent and
- * data in the extra bundle. Specify the following extras:
- * - next_activity (string): The class.getName() class identifier
- * for the activity that should be opened
- * if the user presses next.
- * - text_res_id (int):      The res id of a text that should be displayed.
- * - wiki_help_id (string):  The last part of the help url which usually
- * points to a subpage of a wiki.
- * Example:
- * Intent intent = IntroductionActivity.createIntroductionIntent(this,
- * R.string.text, "wikipage", SomeActivity.class.getName());
- * startActivity(intent);
+ * Prepare the bootstrap process. Asks the user for permissions, shows a warning that we may
+ * change the network settings and allow the user to select if the nodes he want to configure
+ * are part of the current network (so no access point is necessary).
  */
-public class PrepareBootstrapActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener, View.OnClickListener, ServiceConnection, BootstrapService.Callback {
+public class PrepareBootstrapActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener, View.OnClickListener, ServiceConnection, NetworkConnectivityResponse.Callback {
     protected BootstrapService mService;
     TextView txtAccessPoint;
     TextView txtAndroid6Permission;
@@ -46,6 +37,7 @@ public class PrepareBootstrapActivity extends AppCompatActivity implements Compo
     Button btnNext;
     Snackbar snackbar;
     private TextView txtAccessPointSetupFailed;
+    private RadioButton radioNotAssociatedNetwork;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,11 +49,13 @@ public class PrepareBootstrapActivity extends AppCompatActivity implements Compo
         txtAndroid6Permission = (TextView) findViewById(R.id.txtAndroid6Permission);
         txtAccessPointSetupFailed = (TextView) findViewById(R.id.txtAccessPointSetupFailed);
         radioIsLocal = (RadioButton) findViewById(R.id.radioLocalNetwork);
+        radioNotAssociatedNetwork = (RadioButton) findViewById(R.id.radioNotAssociatedNetwork);
 
         assert radioIsLocal != null;
 
         radioIsLocal.setOnCheckedChangeListener(this);
-        radioIsLocal.setChecked(true);
+        radioIsLocal.setChecked(savedInstanceState != null && savedInstanceState.getBoolean("networkIsLocal", true));
+        radioNotAssociatedNetwork.setChecked(!radioIsLocal.isChecked());
 
         txtAccessPointSetupFailed.setVisibility(View.GONE);
 
@@ -89,9 +83,16 @@ public class PrepareBootstrapActivity extends AppCompatActivity implements Compo
             txtAndroid6Permission.setVisibility(View.GONE);
         } else {
             txtAccessPoint.setVisibility(View.VISIBLE);
-            boolean needPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !mService.checkPermissions();
+            boolean needPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP &&
+                    mService != null && !mService.checkPermissions();
             txtAndroid6Permission.setVisibility(needPermission ? View.VISIBLE : View.GONE);
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putBoolean("networkIsLocal", radioIsLocal.isChecked());
+        super.onSaveInstanceState(outState);
     }
 
     @Override
@@ -134,7 +135,7 @@ public class PrepareBootstrapActivity extends AppCompatActivity implements Compo
             return;
         }
 
-        mService.setSameNetwork(radioIsLocal.isChecked());
+        mService.setBootstrapInSameNetwork(radioIsLocal.isChecked());
         Intent intent = new Intent(PrepareBootstrapActivity.this, DetectAndBindActivity.class);
         startActivity(intent);
     }
@@ -145,6 +146,7 @@ public class PrepareBootstrapActivity extends AppCompatActivity implements Compo
         mService = binder.getService();
         btnNext.setText(mService.checkPermissions() ? R.string.btnNext : R.string.btnNeedPermission);
         txtAccessPointSetupFailed.setText(getString(R.string.txtFailedSetupAP, mService.getAccessPointSsid(), mService.getAccessPointKey()));
+        onCheckedChanged(null, radioIsLocal.isChecked());
     }
 
     @Override

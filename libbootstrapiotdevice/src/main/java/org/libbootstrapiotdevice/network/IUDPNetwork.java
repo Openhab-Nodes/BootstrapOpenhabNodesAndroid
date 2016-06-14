@@ -3,7 +3,7 @@ package org.libbootstrapiotdevice.network;
 import java.net.InetAddress;
 
 /**
- * Interface to describe network actions. Used by {@see org.libbootstrapiotdevice.network.BootstrapDevices}.
+ * Interface to describe network actions. Used by {@see org.libbootstrapiotdevice.network.BootstrapCore}.
  */
 public interface IUDPNetwork {
     /**

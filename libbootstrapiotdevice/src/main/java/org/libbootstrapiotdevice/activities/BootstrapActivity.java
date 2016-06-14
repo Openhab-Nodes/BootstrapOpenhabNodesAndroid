@@ -12,12 +12,16 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import org.libbootstrapiotdevice.BootstrapService;
+import org.libbootstrapiotdevice.NetworkConnectivityResponse;
 import org.libbootstrapiotdevice.R;
 import org.libbootstrapiotdevice.network.BootstrapDeviceUpdateListener;
 import org.libbootstrapiotdevice.network.WifiUtils;
 
+/**
+ * Send the bootstrap data to all beforehand selected devices and shows a progress in form of a list
+ * of all devices and their status.
+ */
 public class BootstrapActivity extends AppCompatActivity implements BootstrapActivityUtils.BootstrapServiceReady, BootstrapDeviceUpdateListener {
-    public static final String EXTRA_IS_LOCAL_NETWORK = "IS_LOCAL_NET";
     private Button btnOK;
     private Button btnRetry;
     private ProgressBar progress;
@@ -63,7 +67,7 @@ public class BootstrapActivity extends AppCompatActivity implements BootstrapAct
     }
 
     private void startProcess() {
-        if (utils.getService().getBootstrapDevices().getDevices().isEmpty()) {
+        if (utils.getService().getBootstrapCore().getDevices().isEmpty()) {
             return;
         }
         btnRetry.setEnabled(false);
@@ -74,17 +78,17 @@ public class BootstrapActivity extends AppCompatActivity implements BootstrapAct
         final Snackbar snackbar = Snackbar.make(btnOK, R.string.setup_ap, Snackbar.LENGTH_INDEFINITE);
 
         final BootstrapService service = utils.getService();
-        if (!service.isSameNetwork()) {
+        if (!service.isBootstrapInSameNetwork()) {
             if (WifiUtils.checkWifiAP(this, service.getAccessPointSsid(), service.getAccessPointKey())) {
                 service.takeOverAP(this);
             } else {
                 snackbar.show();
-                service.startWifiAP(this, new BootstrapService.Callback() {
+                service.startWifiAP(this, new NetworkConnectivityResponse.Callback() {
                     @Override
                     public void wifiSuccess(boolean success) {
                         if (success) {
                             snackbar.dismiss();
-                            if (!service.getBootstrapDevices().bootstrapDevices())
+                            if (!service.getBootstrapCore().bootstrapDevices())
                                 deviceChangesFinished();
                         } else {
                             snackbar.dismiss();
@@ -99,14 +103,14 @@ public class BootstrapActivity extends AppCompatActivity implements BootstrapAct
             }
         }
 
-        if (!service.getBootstrapDevices().bootstrapDevices())
+        if (!service.getBootstrapCore().bootstrapDevices())
             deviceChangesFinished();
     }
 
     @Override
     public void onBootstrapServiceReady() {
-        utils.getService().getBootstrapDevices().removeDevicesNotSelected();
-        utils.getService().getBootstrapDevices().addChangeListener(this);
+        utils.getService().getBootstrapCore().removeDevicesNotSelected();
+        utils.getService().getBootstrapCore().addChangeListener(this);
         startProcess();
     }
 

@@ -24,7 +24,7 @@ import javax.net.ssl.X509TrustManager;
 import de.duenndns.ssl.MemorizingTrustManager;
 
 /**
- * Check the connectivity of a given server.
+ * Check the connectivity of a given openhab server.
  */
 public class CheckConnectivity {
     public static final String TAG = "CheckConnectivity";

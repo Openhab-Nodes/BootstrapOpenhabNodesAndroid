@@ -23,23 +23,33 @@ import java.util.List;
 import cc.mvdan.accesspoint.WifiApControl;
 
 /**
- * Allows to connect to a wifi with callback methods and restore the wifi network that was connected on start
+ * Allows to connect to a wifi with callback methods and restore the wifi network that was connected to on start.
  */
 public class WifiUtils {
 
-    public static int getCurrentNetworkID(WifiManager wifiManager) {
+    private static final String TAG = "WifiUtils";
+
+    public static int getCurrentNetworkID(@NonNull WifiManager wifiManager) {
         WifiInfo info = wifiManager.getConnectionInfo();
         return info != null ? info.getNetworkId() : -1;
     }
 
-    public static boolean isConnectedToWifi(WifiManager wifiManager, String ssid) {
+    public static boolean isConnectedToWifi(@NonNull WifiManager wifiManager, String ssid) {
         WifiInfo info = wifiManager.getConnectionInfo();
         return info != null && info.getSSID().equals(ssid);
     }
 
+    /**
+     * Return the associated network addresses of the current wifi network. On android 5+ you may
+     * provide a connectivity manager to make the output more reliable.
+     *
+     * @param connectivityManager A connectivityManager
+     * @return Return a list of ip addresses.
+     */
     @Nullable
-    public static List<InetAddress> getWifiAddresses(ConnectivityManager connectivityManager) {
-        if (android.os.Build.VERSION.SDK_INT >= 23) {
+    @SuppressWarnings("unused")
+    public static List<InetAddress> getWifiAddresses(@Nullable ConnectivityManager connectivityManager) {
+        if (android.os.Build.VERSION.SDK_INT >= 23 && connectivityManager != null) {
             LinkProperties prop = connectivityManager.getLinkProperties(connectivityManager.getActiveNetwork());
 
             List<InetAddress> addresses = new ArrayList<>();
@@ -76,7 +86,7 @@ public class WifiUtils {
             }
             return addresses;
         } catch (SocketException e) {
-            Log.wtf("WIFIIP", "Unable to NetworkInterface.getNetworkInterfaces()");
+            Log.wtf(TAG, "Unable to NetworkInterface.getNetworkInterfaces()");
         }
         return null;
     }
@@ -142,9 +152,7 @@ public class WifiUtils {
             connectivityManager.bindProcessToNetwork(null);
         }
         wifiManager.setWifiEnabled(true);
-        //wifiManager.disconnect();
         wifiManager.enableNetwork(orig_networkId, true);
-        //wifiManager.reconnect();
     }
 
     public static void startAP(@NonNull WifiApControl apControl, @NonNull WifiManager wifiManager,

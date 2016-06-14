@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Allows to add BootstrapDevices and computes a list of all their wireless networks and the
+ * Allows to add BootstrapCore and computes a list of all their wireless networks and the
  * overlapping.
  */
 public class OverlappingNetworks {

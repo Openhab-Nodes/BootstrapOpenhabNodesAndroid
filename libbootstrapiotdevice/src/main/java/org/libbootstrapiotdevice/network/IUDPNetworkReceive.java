@@ -3,7 +3,7 @@ package org.libbootstrapiotdevice.network;
 import java.net.InetSocketAddress;
 
 /**
- * Interface to describe network receiving. Used by {@see org.libbootstrapiotdevice.network.BootstrapDevices}.
+ * Interface to describe network receiving. Used by {@see org.libbootstrapiotdevice.network.BootstrapCore}.
  */
 public interface IUDPNetworkReceive {
     /**

@@ -12,7 +12,7 @@ import android.widget.TextView;
 
 import org.libbootstrapiotdevice.BootstrapService;
 import org.libbootstrapiotdevice.adapter.BootstrapDeviceAdapter;
-import org.libbootstrapiotdevice.network.BootstrapDevices;
+import org.libbootstrapiotdevice.network.BootstrapCore;
 
 public class BootstrapActivityUtils implements ServiceConnection {
     private BootstrapServiceReady bootstrapServiceReady;
@@ -53,9 +53,9 @@ public class BootstrapActivityUtils implements ServiceConnection {
     public void onServiceConnected(ComponentName className, IBinder service) {
         BootstrapService.LocalBinder binder = (BootstrapService.LocalBinder) service;
         mService = binder.getService();
-        BootstrapDevices bootstrapDevices = mService.getBootstrapDevices();
-        bootstrapDevices.addChangeListener(mDevicesAdapter);
-        mDevicesAdapter.setData(bootstrapDevices.getDevices());
+        BootstrapCore bootstrapCore = mService.getBootstrapCore();
+        bootstrapCore.addChangeListener(mDevicesAdapter);
+        mDevicesAdapter.setData(bootstrapCore.getDevices());
         if (bootstrapServiceReady != null)
             bootstrapServiceReady.onBootstrapServiceReady();
     }

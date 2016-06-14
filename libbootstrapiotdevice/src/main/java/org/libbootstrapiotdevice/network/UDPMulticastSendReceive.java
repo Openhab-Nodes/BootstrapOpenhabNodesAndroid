@@ -1,23 +1,29 @@
 package org.libbootstrapiotdevice.network;
 
-import android.content.Context;
-import android.net.ConnectivityManager;
 import android.net.Network;
-import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.InterfaceAddress;
 import java.net.MulticastSocket;
+import java.net.NetworkInterface;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * An instance of this class listens to the UDP port PORT_RECEIVE and will call
- * the inheriting
+ * A multicast UDP network implementation with Multicast Lock and on-the-go restartable
+ * network socket after a wifi change for example. Includes a second sending thread with
+ * a send queue and filters broadcast/multicast messages in the receive part which were
+ * send by us. Implement IUDPNetworkReceive and call start() with your implementation
+ * to receive data. Call send() to send data.
  *
  * @author David Graeff <david.graeff@web.de>
  */
@@ -28,7 +34,6 @@ public class UDPMulticastSendReceive implements IUDPNetwork {
     protected byte[] buffer = new byte[1024];
     protected MulticastSocket socket;
     protected DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-    private Context context;
     private int receivePort;
     private WifiManager.MulticastLock multicastLock;
     private UDPMulticastSendReceiveThread thread = null;
@@ -37,9 +42,24 @@ public class UDPMulticastSendReceive implements IUDPNetwork {
     private LinkedBlockingQueue<SendEntry> sendQueue = new LinkedBlockingQueue<>();
     private DatagramPacket sendPacket = new DatagramPacket(new byte[1], 1);
     private IUDPNetworkReceive receiver;
+    private NetworkInterface networkInterface;
+    private android.net.Network network;
+    private List<InetAddress> localIPAddresses = new ArrayList<>();
+    private InetAddress broadcastAddress;
+
+    /**
+     * If send() is called with a null address, this broadcastAddress will be used instead.
+     *
+     * @param broadcastAddress The broadcast/multicast address.
+     */
+    public void setBroadcastAddress(InetAddress broadcastAddress) {
+        this.broadcastAddress = broadcastAddress;
+    }
 
     @Override
-    public boolean send(int sendPort, InetAddress address, byte[] data) {
+    public boolean send(int sendPort, @Nullable InetAddress address, byte[] data) {
+        if (address == null)
+            address = broadcastAddress;
         sendQueue.add(new SendEntry(data, sendPort, address));
         return false;
     }
@@ -84,11 +104,14 @@ public class UDPMulticastSendReceive implements IUDPNetwork {
         }
     }
 
-    public void start(Context context, int receivePort, IUDPNetworkReceive receiver) {
-        this.context = context;
+    public void start(@NonNull WifiManager wifiManager,
+                      @Nullable Network network, @Nullable NetworkInterface networkInterface,
+                      int receivePort, IUDPNetworkReceive receiver) {
+        this.network = network;
+        this.networkInterface = networkInterface;
         this.receiver = receiver;
+
         if (multicastLock == null) {
-            WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
             multicastLock = wifiManager.createMulticastLock("bootstrapCommunication");
             multicastLock.acquire();
         }
@@ -98,14 +121,89 @@ public class UDPMulticastSendReceive implements IUDPNetwork {
         shutdownThread = false;
         closeSocket = false;
 
+        if (networkInterface != null) {
+            List<InterfaceAddress> interfaceAddressList = networkInterface.getInterfaceAddresses();
+            for (InterfaceAddress interfaceAddress : interfaceAddressList) {
+                InetAddress address = interfaceAddress.getAddress();
+                if (address == null)
+                    continue;
+                localIPAddresses.add(address);
+            }
+        }
+
         if (thread == null) {
             thread = new UDPMulticastSendReceiveThread("UDPMulticastSendReceive");
             thread.start();
+        } else if (socket != null) {
+            socket.close();
         }
 
         if (sendThread == null) {
             sendThread = new SendThread();
             sendThread.start();
+        }
+    }
+
+    /**
+     * @return Return true if a socket is available.
+     */
+    private boolean createSocket() {
+        if (socket != null)
+            return true;
+
+        try {
+            socket = new MulticastSocket(null);
+            socket.setReuseAddress(true);
+            socket.setBroadcast(true);
+            socket.setLoopbackMode(true);
+            socket.setBroadcast(true);
+            socket.bind(new InetSocketAddress(receivePort));
+
+            if (networkInterface != null)
+                socket.setNetworkInterface(networkInterface);
+
+            if (network != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                try {
+                    network.bindSocket(socket);
+                } catch (IOException ignored) {
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    private void udpReceive() {
+        try {
+            closeSocket = false;
+            while (!closeSocket) {
+                Log.w(TAG, "receive ready");
+                multicastLock.acquire();
+                socket.receive(packet);
+                InetSocketAddress remoteAddress = (InetSocketAddress) packet.getSocketAddress();
+                // Don't receive packets from ourself
+                for (InetAddress localAddress : localIPAddresses) {
+                    if (remoteAddress.getAddress().equals(localAddress)) {
+                        remoteAddress = null;
+                        break;
+                    }
+                }
+                if (remoteAddress != null) {
+                    Log.w(TAG, "socket receive " + String.valueOf(packet.getLength()) + " " + String.valueOf(remoteAddress.getPort()) + " " + remoteAddress.getAddress().toString());
+                    receiver.parsePacket(buffer, packet.getLength(), remoteAddress);
+                    // Reset the length of the packet before reusing it.
+                    packet.setLength(buffer.length);
+                }
+            }
+        } catch (IOException e) {
+            socket = null;
+            Log.w(TAG, "socket release");
+            if (!closeSocket) {
+                Log.e(TAG, e.getLocalizedMessage());
+            }
         }
     }
 
@@ -127,11 +225,25 @@ public class UDPMulticastSendReceive implements IUDPNetwork {
             while (!shutdownThread) {
                 try {
                     SendEntry entry = sendQueue.take();
+
                     sendPacket.setPort(entry.sendPort);
-                    sendPacket.setAddress(entry.address);
                     sendPacket.setData(entry.data, 0, entry.data.length);
-                    Log.w(TAG, "send data " + String.valueOf(sendPacket.getLength()) + " " + String.valueOf(sendPacket.getPort()) + " " + sendPacket.getAddress().toString());
-                    socket.send(sendPacket);
+
+                    // We do not use the entry.address for now. Sending to all interface broadcast addresses
+                    // is more reliable, see below.
+//                    sendPacket.setAddress(entry.address);
+//                    Log.w(TAG, "send data " + String.valueOf(sendPacket.getLength()) + " " + String.valueOf(sendPacket.getPort()) + " " + sendPacket.getAddress().toString());
+//                    socket.send(sendPacket);
+
+                    List<InterfaceAddress> interfaceAddresses = networkInterface.getInterfaceAddresses();
+                    for (InterfaceAddress interfaceAddress : interfaceAddresses) {
+                        InetAddress address = interfaceAddress.getBroadcast();
+                        if (address == null)
+                            continue;
+                        sendPacket.setAddress(address);
+                        Log.w(TAG, "send data II " + String.valueOf(sendPacket.getLength()) + " " + String.valueOf(sendPacket.getPort()) + " " + sendPacket.getAddress().toString());
+                        socket.send(sendPacket);
+                    }
                 } catch (InterruptedException | IOException e) {
                     if (!shutdownThread)
                         e.printStackTrace();
@@ -152,55 +264,8 @@ public class UDPMulticastSendReceive implements IUDPNetwork {
 
             shutdownThread = false;
             while (!shutdownThread) {
-                if (socket == null) {
-                    try {
-                        socket = new MulticastSocket(null);
-                        socket.setReuseAddress(true);
-                        socket.setBroadcast(true);
-                        socket.setLoopbackMode(true);
-                        socket.bind(new InetSocketAddress(receivePort));
-
-                        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                            Network n[] = cm.getAllNetworks();
-                            for (Network network : n) {
-                                NetworkInfo networkInfo = cm.getNetworkInfo(network);
-                                if (networkInfo.isConnected() && networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
-                                    network.bindSocket(socket);
-                                    break;
-                                }
-                            }
-                        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            cm.getBoundNetworkForProcess().bindSocket(socket);
-                        }
-
-                        if (sendPacket.getAddress() != null && sendPacket.getAddress().isMulticastAddress())
-                            socket.joinGroup(sendPacket.getAddress());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        continue;
-                    }
-                }
-
-                try {
-                    closeSocket = false;
-                    while (!closeSocket) {
-                        Log.w(TAG, "receive ready");
-                        multicastLock.acquire();
-                        socket.receive(packet);
-                        Log.w(TAG, "socket receive");
-                        InetSocketAddress address = (InetSocketAddress) packet.getSocketAddress();
-                        receiver.parsePacket(buffer, packet.getLength(), address);
-                        // Reset the length of the packet before reusing it.
-                        packet.setLength(buffer.length);
-                    }
-                } catch (IOException e) {
-                    socket = null;
-                    Log.w(TAG, "socket release");
-                    if (!closeSocket) {
-                        Log.e(TAG, e.getLocalizedMessage());
-                    }
-                }
+                if (createSocket())
+                    udpReceive();
             }
         }
     }

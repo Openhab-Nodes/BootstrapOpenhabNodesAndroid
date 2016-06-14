@@ -17,11 +17,11 @@ import java.util.List;
  * For Android < 5 we use a normal BroadcastReceiver to get notified about
  * a wifi change.
  */
-public class WifiReceiver extends BroadcastReceiver {
+public class WifiChangedObserverAndroid4 extends BroadcastReceiver {
     private WifiManager wifiManager;
     private List<NetworkConnectivityResponse> listeners = new ArrayList<>();
 
-    public WifiReceiver(WifiManager wifiManager) {
+    public WifiChangedObserverAndroid4(WifiManager wifiManager) {
         this.wifiManager = wifiManager;
     }
 

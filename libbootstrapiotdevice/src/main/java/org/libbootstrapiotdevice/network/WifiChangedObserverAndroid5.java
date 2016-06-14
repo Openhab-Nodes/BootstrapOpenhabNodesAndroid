@@ -18,15 +18,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Like the WifiReceiver but for android >= 5. React to wifi changes and
+ * Like the WifiChangedObserverAndroid4 but for android >= 5. React to wifi changes and
  * informs all registered listeners. Listeners are one-time only.
  */
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-public class WifiReceiverConnectivityManager extends ConnectivityManager.NetworkCallback {
+public class WifiChangedObserverAndroid5 extends ConnectivityManager.NetworkCallback {
     private WifiManager wifiManager;
     private List<NetworkConnectivityResponse> listeners = new ArrayList<>();
 
-    public WifiReceiverConnectivityManager(WifiManager wifiManager) {
+    public WifiChangedObserverAndroid5(WifiManager wifiManager) {
         this.wifiManager = wifiManager;
     }
 
