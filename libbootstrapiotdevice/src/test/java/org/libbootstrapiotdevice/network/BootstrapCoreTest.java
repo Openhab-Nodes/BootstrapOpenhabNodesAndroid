@@ -160,6 +160,9 @@ public class BootstrapCoreTest implements IUDPNetwork, BootstrapDeviceUpdateList
 
         byte[] data = to_be_send_data;
 
+        assertEquals(BootstrapCore.protocol_header_len + 1 + BootstrapCore.BST_CRYPTO_KEY_MAX_SIZE,
+                to_be_send_data.length);
+
         // Expect an outgoing packet.
         // We expect the header, a crc code, and a command and the app nonce value.
         assertEquals(BootstrapCore.SEND_PORT, to_be_send_port);
@@ -183,7 +186,9 @@ public class BootstrapCoreTest implements IUDPNetwork, BootstrapDeviceUpdateList
 
             // The first content byte of the bind message is the length of the new key.
             assertEquals(devices.bound_key_len, data[BootstrapCore.protocol_header_len]);
-            byte new_key[] = Arrays.copyOfRange(data, BootstrapCore.protocol_header_len + 1, data.length);
+            assertEquals(BootstrapCore.BST_CRYPTO_KEY_MAX_SIZE, data.length - BootstrapCore.protocol_header_len - 1);
+            byte new_key[] = Arrays.copyOfRange(data, BootstrapCore.protocol_header_len + 1,
+                    BootstrapCore.protocol_header_len + 1 + devices.bound_key_len);
             byte stored_key[] = Arrays.copyOf(devices.bound_key, devices.bound_key_len);
             assertTrue(Arrays.equals(new_key, stored_key));
         }
@@ -202,7 +207,7 @@ public class BootstrapCoreTest implements IUDPNetwork, BootstrapDeviceUpdateList
     }
 
     @Test
-    public void testParsePacketUnbound2() throws Exception {
+    public void testParsePacketFromByteArray() throws Exception {
         byte unbound_key[] = {97, 112, 112, 95, 115, 101, 99, 114, 101, 116,};
         byte app_nonce[] = {-38, 105, -41, 63, 71, 59, 47, 103,};
         byte msg_from_device[] = {66, 83, 84, 119, 105, 102, 105, 49, 126, -75, 0, -31, 111, -19, -124, 86, 70, -96, 90, 83, -72, 44, 92, 31, 115, 47, 63, 34, 100, 103, 83, 86, 48, -21, -59, -118, -92, -106, 1, 23, 87, 82, -86, 68, 127, 20, -102, 80, -62, -17, -26, 106, 89, -116, -59, 95, 34, -11, 102, -7, 66, -115, -104, 10, 58, 95, -57, 54, 25, -84, 31, -25, 48, 71, -53, 23, 13, -19, -38, -76, -41, 100, -59, 104, 44, -107, -24, 79, -64, -43, -53, 92, 66, 21, 28, -94, -94, 10, -51, -31, -21, -21, -103, 3, -36, 36, -53, -119, -38, 48, 98, 91, 126, 55, 112, -3, 106, 104, 75, -115, -88, -58, 40, 40, -1, 23, 124, -105, 26, 61, -19, 75, -80, 29, 27, 10, -105, -19, 81, -61, -68, -12, 82, 53, 65, -84, -27, 8, -86, -88, -52, -2, -91, -63, 87, -22, -32, -24, -67, -2, 44, 122, -108, -101, -111, 127, -13, -3, -38, -121, 119, -65, 60, -37, -30, 69, -38, -30, -70, 111, -33, 37, 39, -21, 61, 88, 111, -14, -117, 110, 105, -75, -72, 15, -63, 105, -58, -103, 85, -14, 62, 90, 33, 69, -66, -127, -63, 48, 20, 98, 104, -111, 27, -124, 119, 22, -120, 67, -78, -13, -72, 109, -82, -44, -1, -92, -2, 98, -83, -18, -27, -81, 27, 0, -70, -12, -111, -27, -18, -27, -19, 37, 50, -11, -91, -86, -88, 7, -23, 55, 52, 45, -76, -87, -104, -58, 99, -74, 28, 90, -108, -55, -7, 7, 78, 73, 102, 127, 124, -71, 52, 17, 79, -21, 49, 42, -23, 3, -103, 80, -91, 64, -48, 65, -107, -43, 96, -14, 111, -30, -68, 68, 27, 22, -80, -9, 38, 86, 125, 53, 1, -36, 53, 93, 27, -81, -104, -71, -81, 46, 30, -23, -52, -69, 83, -45, 103, -6, -19, -5, 117, -87, -101, -73, -10, -108, -59, 66, 17, 79, -94, -58, -15, 69, -9, -19, 55, 68, 57, -96, -111, 84, 12, 61, -69, -117, 65, -114, 116, -6, 109, 13, 58, -85, -98, -71, 96, 109, 66, 57, 65, -105, -15, 58, 123, 19, -101, -18, 113, -17, 115, 83, -127, 106, -127, -5, -128, -31, 50, 126, -20, -60, -23, -123, 22, 68, 106, -1, 60, 3, -40, 126, 56, 69, -119, -98, -54, -47, 98, 93, -42, -17, 62, 21, 6, -72, -118, 120, -26, 95, -63, 77, -109, 91, -81, 77, -28, -46, -107, 59, 24, -121, -14, 106, -41, -31, 106, -104, 13, -7, 77, 45, 16, 121, -35, -107, -83, 53, -51, 52, 40, 58, 117, -127, 14, 48, 28, -16, -106, 25, -109, -23, 114, -2, -10, 76, -91, 40, -103, -105, -78, 109, -100, -86, -50, -9, 16, 72, -107, 77, -5, -90, 47, 30, 105, 88, 79, -54, 44, 52, 27, -94, -108, -36, 8, 40, 1, -30, 44, 54, -7, -79, -106, -80, 76, -115, -81, 17, -18, -31, 73, -12, 37, 83, 68, -124, 99, -60, 98, -123, 51, -105,
@@ -225,7 +230,7 @@ public class BootstrapCoreTest implements IUDPNetwork, BootstrapDeviceUpdateList
         // Expect a device added to the device list.
         assertEquals(1, devices.getDevices().size());
         BootstrapDevice device = devices.getDevices().get(0);
-        assertEquals(DeviceMode.Bound, device.getMode());
+        assertEquals(DeviceMode.Binding, device.getMode());
         assertEquals(0, flag_deviceUpdated);
     }
 
@@ -335,7 +340,7 @@ public class BootstrapCoreTest implements IUDPNetwork, BootstrapDeviceUpdateList
         BootstrapDevice d1;
         d1 = new BootstrapDevice("uid1", "name1", null);
         d1.updateState(DeviceMode.Bound, DeviceState.STATE_OK, null,
-                "", device_nonce, firmware_assumed_key, firmware_assumed_key.length);
+                "", device_nonce, firmware_assumed_key, firmware_assumed_key.length, external_confirmation_state);
         devices.getDevices().add(d1);
         assertEquals(1, devices.getDevices().size());
 

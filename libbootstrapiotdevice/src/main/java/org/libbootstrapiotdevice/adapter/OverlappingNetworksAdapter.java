@@ -12,9 +12,8 @@ import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.TextView;
 
-import org.libbootstrapiotdevice.OverlappingNetworks;
-
 import org.libbootstrapiotdevice.BootstrapDevice;
+import org.libbootstrapiotdevice.OverlappingNetworks;
 import org.libbootstrapiotdevice.R;
 import org.libbootstrapiotdevice.WirelessNetwork;
 
@@ -26,12 +25,31 @@ import java.util.List;
  */
 public class OverlappingNetworksAdapter extends RecyclerView.Adapter<OverlappingNetworksAdapter.ViewHolder> implements CompoundButton.OnCheckedChangeListener {
     OverlappingNetworks data = new OverlappingNetworks();
-    int selected = 0;
+    int selected = -1;
     boolean onBind = false;
 
     Drawable d[] = new Drawable[]{null,null,null,null,null,null};
 
     onSelectionChange observer;
+
+    public OverlappingNetworksAdapter(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            d[0] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_off_black_24dp, context.getTheme());
+            d[1] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_0_bar_black_24dp, context.getTheme());
+            d[2] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_1_bar_black_24dp, context.getTheme());
+            d[3] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_2_bar_black_24dp, context.getTheme());
+            d[4] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_3_bar_black_24dp, context.getTheme());
+            d[5] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_4_bar_black_24dp, context.getTheme());
+        } else {
+            d[0] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_off_black_24dp);
+            d[1] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_0_bar_black_24dp);
+            d[2] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_1_bar_black_24dp);
+            d[3] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_2_bar_black_24dp);
+            d[4] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_3_bar_black_24dp);
+            d[5] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_4_bar_black_24dp);
+        }
+    }
+
     public void setOnSelectionChangeListener(onSelectionChange observer) {
         this.observer = observer;
     }
@@ -57,41 +75,20 @@ public class OverlappingNetworksAdapter extends RecyclerView.Adapter<Overlapping
     }
 
     public WirelessNetwork getSelectedNetwork() {
-        if (selected == -1)
+        if (selected == -1 || selected >= data.networks.size())
             return null;
         return data.networks.get(selected);
     }
 
-    // inner class to hold a reference to each item of RecyclerView
-    public static class ViewHolder extends RecyclerView.ViewHolder {
-        public RadioButton txtTitle;
-        public TextView txtSubtitle;
-        public ImageView imgViewIcon;
-
-        public ViewHolder(View itemLayoutView, CompoundButton.OnCheckedChangeListener checkedChange) {
-            super(itemLayoutView);
-            txtTitle = (RadioButton)itemLayoutView.findViewById(R.id.title);
-            txtSubtitle = (TextView)itemLayoutView.findViewById(R.id.subtitle);
-            imgViewIcon = (ImageView)itemLayoutView.findViewById(R.id.image);
-            txtTitle.setOnCheckedChangeListener(checkedChange);
-        }
-    }
-
-    public OverlappingNetworksAdapter(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            d[0] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_off_black_24dp,context.getTheme());
-            d[1] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_0_bar_black_24dp,context.getTheme());
-            d[2] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_1_bar_black_24dp,context.getTheme());
-            d[3] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_2_bar_black_24dp,context.getTheme());
-            d[4] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_3_bar_black_24dp,context.getTheme());
-            d[5] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_4_bar_black_24dp,context.getTheme());
-        } else {
-            d[0] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_off_black_24dp);
-            d[1] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_0_bar_black_24dp);
-            d[2] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_1_bar_black_24dp);
-            d[3] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_2_bar_black_24dp);
-            d[4] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_3_bar_black_24dp);
-            d[5] = context.getResources().getDrawable(R.drawable.ic_signal_wifi_4_bar_black_24dp);
+    public void setSelectedNetwork(String networkSSID) {
+        if (networkSSID == null)
+            return;
+        for (int i = 0; i < data.networks.size(); i++) {
+            if (data.networks.get(i).ssid.equals(networkSSID)) {
+                selected = i;
+                notifyDataSetChanged();
+                break;
+            }
         }
     }
 
@@ -103,7 +100,7 @@ public class OverlappingNetworksAdapter extends RecyclerView.Adapter<Overlapping
     // Create new views (invoked by the layout manager)
     @Override
     public OverlappingNetworksAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View itemLayoutView = LayoutInflater.from(parent.getContext()).inflate(R.layout.bootstrap_entry, parent, false);
+        View itemLayoutView = LayoutInflater.from(parent.getContext()).inflate(R.layout.network_entry, parent, false);
         return new ViewHolder(itemLayoutView, this);
     }
 
@@ -117,7 +114,7 @@ public class OverlappingNetworksAdapter extends RecyclerView.Adapter<Overlapping
         onBind = false;
         viewHolder.txtSubtitle.setText(c.getString(R.string.network_entry, data.networks.get(position).deviceCount(), data.devices.size()));
         int strength = data.networks.get(position).getStrength();
-        viewHolder.imgViewIcon.setImageDrawable(d[strength*6/100]);
+        viewHolder.imgViewIcon.setImageDrawable(d[strength * (d.length - 1) / 100]);
     }
 
     public void addDevice(BootstrapDevice device) {
@@ -130,6 +127,21 @@ public class OverlappingNetworksAdapter extends RecyclerView.Adapter<Overlapping
 
         if (sizeBefore != data.networks.size()) {
             notifyItemRangeInserted(sizeBefore, data.networks.size()-1);
+        }
+    }
+
+    // inner class to hold a reference to each item of RecyclerView
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        public RadioButton txtTitle;
+        public TextView txtSubtitle;
+        public ImageView imgViewIcon;
+
+        public ViewHolder(View itemLayoutView, CompoundButton.OnCheckedChangeListener checkedChange) {
+            super(itemLayoutView);
+            txtTitle = (RadioButton) itemLayoutView.findViewById(R.id.title);
+            txtSubtitle = (TextView) itemLayoutView.findViewById(R.id.subtitle);
+            imgViewIcon = (ImageView) itemLayoutView.findViewById(R.id.image);
+            txtTitle.setOnCheckedChangeListener(checkedChange);
         }
     }
 }

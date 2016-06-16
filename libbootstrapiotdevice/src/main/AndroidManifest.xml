@@ -25,6 +25,9 @@
         <activity
             android:name="org.libbootstrapiotdevice.activities.DetectAndBindActivity"
             android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name="org.libbootstrapiotdevice.activities.TestNetworkActivity"
+            android:theme="@style/AppTheme.Dialog" />
 
         <service
             android:name="org.libbootstrapiotdevice.BootstrapService"

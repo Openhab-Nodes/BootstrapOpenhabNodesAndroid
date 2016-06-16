@@ -72,8 +72,10 @@ public class OpenHABActivity extends AppCompatActivity implements onSelectionCha
                         openhabImageView);
                 if (server != null) {
                     BootstrapData.instance().addAdditionalData("openhab_server", server.getUrl());
-                    BootstrapData.instance().addAdditionalData("openhab_user", server.username);
-                    BootstrapData.instance().addAdditionalData("openhab_password", server.password);
+                    if (server.username != null)
+                        BootstrapData.instance().addAdditionalData("openhab_user", server.username);
+                    if (server.password != null)
+                        BootstrapData.instance().addAdditionalData("openhab_password", server.password);
 
                     Intent intent = new Intent(OpenHABActivity.this, PrepareBootstrapActivity.class);
                     startActivity(intent);

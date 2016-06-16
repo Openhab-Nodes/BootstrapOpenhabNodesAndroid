@@ -120,7 +120,6 @@ public class BootstrapService extends Service implements Handler.Callback {
         if (response.what == TEST_WIFI_AND_RESET) {
             boolean connected = WifiUtils.isConnectedToWifi(wifiManager, response.ssid);
             WifiUtils.restoreNetwork(wifiManager, connectivityManager, orig_networkId);
-            WifiUtils.removeStoredNetwork(wifiManager, response.ssid);
             response.callback.wifiSuccess(connected);
         } else if (response.what == TEST_AP_WIFI) {
             WifiApControl apControl = WifiApControl.getInstance(this);
@@ -352,6 +351,10 @@ public class BootstrapService extends Service implements Handler.Callback {
      */
     public String getAccessPointSsid() {
         return access_point_ssid;
+    }
+
+    public String getLastNetworkSSID() {
+        return WifiUtils.getNetworkSSIDByID(wifiManager, orig_networkId);
     }
 
     /**

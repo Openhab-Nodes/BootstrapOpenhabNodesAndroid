@@ -32,10 +32,12 @@ public class BootstrapData {
 
 
     public void addAdditionalData(String key, String value) {
+        if (key == null || value == null)
+            throw new RuntimeException("Empty value not allowed");
         additional.put(key, value);
     }
 
-    public void addDataToStream(@NonNull ByteArrayOutputStream outputStream) {
+    public int addDataToStream(@NonNull ByteArrayOutputStream outputStream) {
         if (bst_ssid == null)
             throw new RuntimeException("bst_ssid may not be empty!");
 
@@ -43,22 +45,29 @@ public class BootstrapData {
         d = bst_ssid.getBytes();
         outputStream.write(d, 0, d.length);
         outputStream.write(0);
+        int written = d.length + 1;
 
         if (bst_pwd != null) {
             d = bst_pwd.getBytes();
             outputStream.write(d, 0, d.length);
             outputStream.write(0);
+            written += d.length;
         } else
             outputStream.write(0);
+        ++written;
 
         for (Map.Entry<String, String> entry : additional.entrySet()) {
             d = entry.getKey().replace('\t', ' ').getBytes();
             outputStream.write(d, 0, d.length);
             outputStream.write('\t');
+            written += d.length + 1;
             d = entry.getValue().replace('\t', ' ').getBytes();
             outputStream.write(d, 0, d.length);
             outputStream.write('\t');
+            written += d.length + 1;
         }
         outputStream.write('\0');
+        ++written;
+        return written;
     }
 }

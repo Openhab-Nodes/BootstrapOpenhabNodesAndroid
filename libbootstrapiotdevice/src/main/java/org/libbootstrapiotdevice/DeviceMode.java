@@ -12,7 +12,7 @@ public enum DeviceMode {
     BindingError,
     Bound,
 
-    Bootstrapping,
+    BootstrappingDone,
     BootstrappingError,
 
     NotInRange;
@@ -29,7 +29,7 @@ public enum DeviceMode {
                 return c.getString(R.string.bs_device_state_binding_error, customErrorText);
             case Unbound:
                 return c.getString(R.string.bs_device_state_unbound);
-            case Bootstrapping:
+            case BootstrappingDone:
                 return c.getString(R.string.bs_device_state_bs);
             case BootstrappingError:
                 return c.getString(R.string.bs_device_state_bs_failed, customErrorText);

@@ -1,5 +1,6 @@
 package org.libbootstrapiotdevice.activities;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
@@ -116,8 +117,16 @@ public class BootstrapActivity extends AppCompatActivity implements BootstrapAct
 
     @Override
     protected void onStop() {
-        super.onStop();
+        unbindService(utils);
         utils.getService().restoreWifi(this);
+        super.onStop();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Intent intent = new Intent(this, BootstrapService.class);
+        bindService(intent, utils, Context.BIND_AUTO_CREATE);
     }
 
     @Override

@@ -9,6 +9,8 @@ import org.libbootstrapiotdevice.R;
  */
 public enum DeviceState {
     STATE_OK,
+    STATE_HELLO,
+    STATE_BOOTSTRAP_OK,
 
     STATE_ERROR_UNSPECIFIED,
     STATE_ERROR_BINDING,
@@ -22,6 +24,10 @@ public enum DeviceState {
         switch (state) {
             case STATE_OK:
                 return null;
+            case STATE_HELLO:
+                return c.getString(R.string.device_wait_for_data);
+            case STATE_BOOTSTRAP_OK:
+                return c.getString(R.string.bs_device_state_bs);
             case STATE_ERROR_BINDING:
                 return c.getString(R.string.error_binding_failed);
             case STATE_ERROR_BOOTSTRAP_DATA:

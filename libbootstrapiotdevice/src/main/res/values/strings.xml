@@ -9,10 +9,10 @@
     <string name="bs_device_state_connection_error_specific">Device bound to other app!</string>
     <string name="bs_device_state_binding">Binding device to app</string>
     <string name="bs_device_state_binding_error">Refused to bind: %1$s</string>
-    <string name="bs_device_state_bs">Sending data</string>
+    <string name="bs_device_state_bs">Bootstrap done</string>
     <string name="bs_device_state_bs_failed">Bootstrap failed: %1$s</string>
     <string name="bs_device_state_not_in_range">Not in range anymore</string>
-    <string name="bs_device_state_bound">Already bound</string>
+    <string name="bs_device_state_bound">Device is bound</string>
     <string name="bs_device_state_unbound">Unbound device</string>
     <string name="bind_devices_to_app">Bind devices to APP</string>
     <string name="bootstrap_devices">Bootstrap devices</string>
@@ -25,7 +25,7 @@
     <string name="error_bootstrap_data_invalid">Bootstrap data invalid</string>
     <string name="error_binding_failed">Binding failed</string>
     <string name="bs_device_state_wait_for_welcome">Wait for welcome</string>
-    <string name="request_wifi_networks">Request wifi networks</string>
+    <string name="request_wifi_networks">Select destination wifi</string>
     <string name="wifi_signal_strength">Wifi signal strength</string>
     <string name="test_wifi_credentials">Test</string>
     <string name="wifi_password">Wifi password</string>
@@ -35,4 +35,7 @@
     <string name="btnRestart">Restart</string>
     <string name="btnNext">Next</string>
     <string name="btnRetry">Retry</string>
+    <string name="btnTest">Test</string>
+    <string name="wifi_password_incorrect">The wifi password is not correct or we could not establish a connection at the moment. Try again, please.</string>
+    <string name="device_wait_for_data">Wait for data …</string>
 </resources>

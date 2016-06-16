@@ -38,12 +38,14 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
     final static public int BST_UID_SIZE = 6;
     final static public int BST_CRYPTO_KEY_MAX_SIZE = 32;
     final static public int BST_CHECKSUM_SIZE = 2;
+    final static public int BST_STORAGE_RAM_SIZE = 512;
     // Async
     final static int MSG_DETECT = 1;
     final static int MSG_DETECT_FINISHED = 2;
     final static int MSG_BOOTSTRAP = 3;
     final static int MSG_BOOTSTRAP_FINISHED = 4;
     final static int MSG_BIND_OR_UPDATE = 5;
+    final static int MSG_DEVICE_ONLINE = 6;
     ////// Protocol related //////
     protected static byte[] header = "BSTwifi1".getBytes();
     public static int protocol_header_len = header.length + BST_CHECKSUM_SIZE + 1;
@@ -74,7 +76,7 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
      * <p/>
      * A nonce value for a new encryption session is also generated in this method. Because it makes
      * sense to create a new app nonce value each time a communication session starts, you may call
-     * generateAppNonce() before using sendHello() and other traffic generating methods.
+     * generateAppNonce() before using sendRequestWifiList() and other traffic generating methods.
      *
      * @param overwrite_handler For tests only. Replace the message handler.
      * @param bound_key         The key that is used if the app has bound the device.
@@ -226,7 +228,7 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
      *
      * @return Return true if sending has been successfully.
      */
-    private boolean encryptCrcAndSend(@Nullable BootstrapDevice device) {
+    private boolean encryptCrcAndSend(@Nullable BootstrapDevice device, boolean encrypt) {
         byte data[] = sendStream.toByteArray();
         // skip header and checksum and command field for checksum calculation
         byte crc[] = Checksums.CheckSumAsBytes(Checksums.GenerateChecksumCRC16(data, protocol_header_len));
@@ -235,7 +237,8 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
         if (device == null) {
             return network.send(SEND_PORT, null, data);
         } else {
-            device.cipherEncrypt(data, protocol_header_len);
+            if (encrypt)
+                device.cipherEncrypt(data, protocol_header_len);
             return network.send(SEND_PORT, device.address, data);
         }
     }
@@ -248,8 +251,26 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
     @Override
     public boolean handleMessage(Message msg) {
         switch (msg.what) {
+            // Add device if necessary, send request-wifi message to get the rest of the details
+            case MSG_DEVICE_ONLINE: {
+                int index = msg.arg1;
+                boolean added = false;
+                BootstrapDevice device = (BootstrapDevice) msg.obj;
+                if (index == -1) {
+                    index = devices.size();
+                    devices.add(device);
+                    added = true;
+                }
+
+                for (BootstrapDeviceUpdateListener listener : changeListener) {
+                    listener.deviceUpdated(index, added);
+                }
+                sendRequestWifiList(device);
+                break;
+            }
+            // Broadcast the request-wifi message
             case MSG_DETECT:
-                sendHello();
+                sendRequestWifiList(null);
                 break;
             case MSG_DETECT_FINISHED:
             case MSG_BOOTSTRAP_FINISHED:
@@ -257,6 +278,7 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
                     listener.deviceChangesFinished();
                 }
                 break;
+            // Add device if necessary, send bind-to-app message
             case MSG_BIND_OR_UPDATE: {
                 int index = msg.arg1;
                 boolean added = false;
@@ -275,17 +297,19 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
                     bindToDevice(device);
                 break;
             }
-            case MSG_BOOTSTRAP:
+            case MSG_BOOTSTRAP: {
                 for (int i = 0; i < devices.size(); i++) {
                     BootstrapDevice device = devices.get(i);
-                    if (device.getMode() == DeviceMode.Bound) {
-                        device.setMode(DeviceMode.Bootstrapping);
-                        for (BootstrapDeviceUpdateListener listener : changeListener) {
-                            listener.deviceUpdated(msg.arg1, false);
-                        }
-                        bootstrapDevice(device, (BootstrapData) msg.obj);
+                    switch (device.getMode()) {
+                        case Bound:
+                            bootstrapDevice(device, (BootstrapData) msg.obj);
+                            break;
+                        case NotInRange:
+                            sendRequestWifiList(device);
+                            break;
                     }
                 }
+            }
             default:
                 break;
         }
@@ -330,12 +354,12 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
      * Use default values for interval and attempts and the singleton instance of BootstrapData.
      */
     public boolean bootstrapDevices() {
-        return bootstrapDevices(2000, 3, BootstrapData.instance());
+        return bootstrapDevices(2000, 5, BootstrapData.instance());
     }
 
     /**
      * Start bootstrapping devices which are listed in the device list and which
-     * are in the bound mode.
+     * are in bound mode.
      *
      * @param intervalMS Interval between bootstrap attempts.
      * @param attempts   How many attempts? Should be at least 1.
@@ -346,16 +370,24 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
             return false;
         }
 
+        for (int i = 0; i < devices.size(); i++) {
+            BootstrapDevice device = devices.get(i);
+            device.setMode(DeviceMode.NotInRange);
+            for (BootstrapDeviceUpdateListener listener : changeListener) {
+                listener.deviceUpdated(i, false);
+            }
+        }
+
         for (int i = 0; i < attempts; ++i)
             handler.sendMessageDelayed(handler.obtainMessage(MSG_BOOTSTRAP, data), i * intervalMS);
         handler.sendEmptyMessageDelayed(MSG_BOOTSTRAP_FINISHED, attempts * intervalMS);
         return true;
     }
 
-    private boolean sendHello() {
+    private boolean sendRequestWifiList(@Nullable BootstrapDevice device) {
         initPacket(SendCommandEnum.CMD_HELLO);
         sendStream.write(app_nonce, 0, BST_NONCE_SIZE);
-        return encryptCrcAndSend(null);
+        return encryptCrcAndSend(device, false);
     }
 
     private boolean bindToDevice(@NonNull BootstrapDevice device) {
@@ -365,14 +397,18 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
         // the real key is random junk. This ensures that a network sniffer is not
         // able to determine the length of the key.
         sendStream.write(bound_key_len);
-        sendStream.write(bound_key, 0, bound_key_len);
-        return encryptCrcAndSend(device);
+        sendStream.write(bound_key, 0, BST_CRYPTO_KEY_MAX_SIZE);
+        return encryptCrcAndSend(device, true);
     }
 
     private boolean bootstrapDevice(@NonNull BootstrapDevice device, @NonNull BootstrapData data) {
         initPacket(SendCommandEnum.CMD_SET_DATA);
-        data.addDataToStream(sendStream);
-        return encryptCrcAndSend(device);
+        int written = data.addDataToStream(sendStream);
+        for (int i = written; i < BST_STORAGE_RAM_SIZE; ++i) {
+            sendStream.write(random.nextInt());
+        }
+        // fill until BST_STORAGE_RAM_SIZE
+        return encryptCrcAndSend(device, true);
     }
 
     @Override
@@ -416,24 +452,32 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
             }
         }
 
+        if (device == null) {
+            device = new BootstrapDevice(peer.getAddress());
+        }
+
+        ////////// Unencrypted hello message without payload //////////
+        if (state == DeviceState.STATE_HELLO || state == DeviceState.STATE_BOOTSTRAP_OK) {
+            device.updateLastSeen();
+            Message msg = handler.obtainMessage(MSG_DEVICE_ONLINE, index, 0, device);
+            handler.sendMessage(msg);
+            return;
+        }
+
         ////////// Decrypt and CRC //////////
-        byte[] decrypted_msg = message.clone();
+        byte decrypted_msg[] = new byte[length - protocol_header_len];
 
         boolean is_unbound = true;
-        if (device != null) {
-            if (device.getMode() == DeviceMode.Unbound) {
-                crypto.cipherInit(unbound_key, 0, unbound_key_len, app_nonce, 0, app_nonce.length);
-            } else {
-                crypto.cipherInit(bound_key, 0, bound_key_len, app_nonce, 0, app_nonce.length);
-                is_unbound = false;
-            }
-        } else {
+        if (device.getMode() == DeviceMode.Unbound) {
             crypto.cipherInit(unbound_key, 0, unbound_key_len, app_nonce, 0, app_nonce.length);
+        } else {
+            crypto.cipherInit(bound_key, 0, bound_key_len, app_nonce, 0, app_nonce.length);
+            is_unbound = false;
         }
-        crypto.cipherDecrypt(decrypted_msg, protocol_header_len, length - protocol_header_len,
-                decrypted_msg, protocol_header_len);
+        crypto.cipherDecrypt(message, protocol_header_len, length - protocol_header_len,
+                decrypted_msg, 0);
 
-        byte computed_crc[] = Checksums.CheckSumAsBytes(Checksums.GenerateChecksumCRC16(decrypted_msg, protocol_header_len));
+        byte computed_crc[] = Checksums.CheckSumAsBytes(Checksums.GenerateChecksumCRC16(decrypted_msg, 0));
 
         if (!Arrays.equals(computed_crc, crc)) {
             is_unbound = !is_unbound;
@@ -442,10 +486,9 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
             } else {
                 crypto.cipherInit(bound_key, 0, bound_key_len, app_nonce, 0, app_nonce.length);
             }
-            decrypted_msg = message.clone();
-            crypto.cipherDecrypt(decrypted_msg, protocol_header_len, length - protocol_header_len,
-                    decrypted_msg, protocol_header_len);
-            computed_crc = Checksums.CheckSumAsBytes(Checksums.GenerateChecksumCRC16(decrypted_msg, protocol_header_len));
+            crypto.cipherDecrypt(message, protocol_header_len, length - protocol_header_len,
+                    decrypted_msg, 0);
+            computed_crc = Checksums.CheckSumAsBytes(Checksums.GenerateChecksumCRC16(decrypted_msg, 0));
         }
 
         if (!Arrays.equals(computed_crc, crc)) {
@@ -454,8 +497,7 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
         }
 
         ////////// Device nonce, uid //////////
-        ByteArrayInputStream inputStream = new ByteArrayInputStream(decrypted_msg, protocol_header_len,
-                length - protocol_header_len);
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(decrypted_msg, 0, decrypted_msg.length);
 
         byte[] device_nonce = new byte[BST_NONCE_SIZE];
 
@@ -472,11 +514,12 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
         }
 
         ////////// wifi_list_size_in_bytes, wifi_list_entries //////////
-        if (inputStream.available() < 2) {
+        if (inputStream.available() < 3) {
             Log.e(TAG, "Welcome message to short! wifi list info missing. " + String.valueOf(length));
             return;
         }
 
+        int external_confirmation_state = inputStream.read();
         int wifi_list_size_in_bytes = inputStream.read();
         int wifi_list_entries = inputStream.read();
 
@@ -488,16 +531,16 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
         ////////// wifi list //////////
         WirelessNetwork currentNetworkInList = null;
         List<WirelessNetwork> list = new ArrayList<>();
-        int temp;
+
         while (wifi_list_entries-- > 0 && inputStream.available() >= 3) {
             WirelessNetwork network = new WirelessNetwork();
-            network.strength = inputStream.read();
-            temp = inputStream.read();
+            network.setStrength(inputStream.read());
             if (network.strength < 0 || network.strength > 100) {
-                Log.e(TAG, "Parsing error for RSP_WIFI_LIST " + String.valueOf(network.strength) + " " + String.valueOf(temp));
+                Log.e(TAG, "Parsing error for RSP_WIFI_LIST " + String.valueOf(network.strength));
                 break;
             }
 
+            int temp = inputStream.read();
             if (temp > 0 && temp < WirelessNetwork.EncryptionMode.values().length)
                 network.mode = WirelessNetwork.EncryptionMode.values()[temp];
             else
@@ -538,7 +581,7 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
         }
 
         ////////// name_or_log //////////
-        temp = 0;
+        int temp = 0;
         inputStream.mark(0);
         while (inputStream.available() > 0) {
             ++temp;
@@ -558,22 +601,22 @@ public class BootstrapCore implements IUDPNetworkReceive, Handler.Callback {
         } else
             name_or_log = new byte[0];
 
-        if (device == null) {
-            device = new BootstrapDevice(new String(uid),
-                    new String(name_or_log), peer.getAddress());
-        }
-
         device.setWirelessNetwork(currentNetworkInList);
 
+        if (state == DeviceState.STATE_OK)
+            device.setName(new String(name_or_log));
+        else
+            device.setErrorMessage(new String(name_or_log));
+
         if (is_unbound) {
-            device.updateState(DeviceMode.Unbound,
-                    state, list, state == DeviceState.STATE_OK ? "" : new String(name_or_log),
-                    device_nonce, unbound_key, unbound_key_len);
+            device.updateState(new String(uid), DeviceMode.Unbound,
+                    state, list,
+                    device_nonce, unbound_key, unbound_key_len, external_confirmation_state);
             device.setMode(DeviceMode.Binding);
         } else {
-            device.updateState(DeviceMode.Bound,
-                    state, list, state == DeviceState.STATE_OK ? "" : new String(name_or_log),
-                    device_nonce, bound_key, bound_key_len);
+            device.updateState(new String(uid), DeviceMode.Bound,
+                    state, list,
+                    device_nonce, bound_key, bound_key_len, external_confirmation_state);
 
         }
         Message msg = handler.obtainMessage(MSG_BIND_OR_UPDATE, index, 0, device);

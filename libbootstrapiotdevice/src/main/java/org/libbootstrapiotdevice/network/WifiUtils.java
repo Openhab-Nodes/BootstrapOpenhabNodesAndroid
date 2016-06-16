@@ -36,7 +36,7 @@ public class WifiUtils {
 
     public static boolean isConnectedToWifi(@NonNull WifiManager wifiManager, String ssid) {
         WifiInfo info = wifiManager.getConnectionInfo();
-        return info != null && info.getSSID().equals(ssid);
+        return info != null && info.getSSID().replace("\"","").equals(ssid);
     }
 
     /**
@@ -98,8 +98,7 @@ public class WifiUtils {
      * @param password The password
      */
     public static boolean connectToWifi(WifiManager wifiManager, String ssid, String password) {
-        WifiInfo info = wifiManager.getConnectionInfo();
-        if (info != null && info.getSSID().equals(ssid)) {
+        if (isConnectedToWifi(wifiManager, ssid)) {
             return true;
         }
 
@@ -107,14 +106,17 @@ public class WifiUtils {
             throw new RuntimeException("connectToWifi can only be called in the main thread");
         }
 
+        wifiManager.setWifiEnabled(true);
+
         WifiConfiguration wifiConfig = null;
-        for (WifiConfiguration configuration: wifiManager.getConfiguredNetworks()) {
-            if (configuration.SSID.equals("\"" + ssid + "\"")) {
-                wifiConfig = configuration;
-                wifiConfig.preSharedKey = "\"" + password + "\"";
-                break;
+        if (wifiManager.getConfiguredNetworks() != null)
+            for (WifiConfiguration configuration: wifiManager.getConfiguredNetworks()) {
+                if (configuration.SSID.equals("\"" + ssid + "\"")) {
+                    wifiConfig = configuration;
+                    wifiConfig.preSharedKey = "\"" + password + "\"";
+                    break;
+                }
             }
-        }
 
         if (wifiConfig == null) {
             wifiConfig = new WifiConfiguration();
@@ -129,11 +131,21 @@ public class WifiUtils {
         }
 
         //wifiManager.disconnect();
-        wifiManager.setWifiEnabled(true);
         wifiManager.enableNetwork(wifiConfig.networkId, true);
         //wifiManager.reconnect();
 
         return false;
+    }
+
+    public static String getNetworkSSIDByID(WifiManager wifiManager, int networkID) {
+        if (wifiManager == null || wifiManager.getConfiguredNetworks() == null)
+            return null;
+        for (WifiConfiguration configuration: wifiManager.getConfiguredNetworks()) {
+            if (configuration.networkId == networkID) {
+                return configuration.SSID.replace("\"","");
+            }
+        }
+        return null;
     }
 
     public static void removeStoredNetwork(WifiManager wifiManager, String ssid) {
@@ -148,9 +160,17 @@ public class WifiUtils {
 
     public static void restoreNetwork(WifiManager wifiManager,
                                       ConnectivityManager connectivityManager, int orig_networkId) {
+        if (orig_networkId == -1)
+            return;
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             connectivityManager.bindProcessToNetwork(null);
         }
+
+        WifiInfo connectionInfo = wifiManager.getConnectionInfo();
+        if (connectionInfo.getNetworkId() == orig_networkId)
+            return;
+
         wifiManager.setWifiEnabled(true);
         wifiManager.enableNetwork(orig_networkId, true);
     }

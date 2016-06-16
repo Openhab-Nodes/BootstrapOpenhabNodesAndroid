@@ -25,6 +25,11 @@ public class WirelessNetwork {
         return strength;
     }
 
+    public void setStrength(int strength) {
+        if (strength > 100) strength = 100;
+        this.strength = strength;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof WirelessNetwork)) return false;

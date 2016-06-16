@@ -135,6 +135,8 @@ public class UDPMulticastSendReceive implements IUDPNetwork {
             thread = new UDPMulticastSendReceiveThread("UDPMulticastSendReceive");
             thread.start();
         } else if (socket != null) {
+            sendThread.interrupt();
+            sendThread = null;
             socket.close();
         }
 
@@ -167,6 +169,11 @@ public class UDPMulticastSendReceive implements IUDPNetwork {
                     network.bindSocket(socket);
                 } catch (IOException ignored) {
                 }
+            }
+
+            if (sendThread == null) {
+                sendThread = new SendThread();
+                sendThread.start();
             }
 
         } catch (IOException e) {
@@ -220,6 +227,9 @@ public class UDPMulticastSendReceive implements IUDPNetwork {
     }
 
     private class SendThread extends Thread {
+        SendThread() {
+            super("sendThread");
+        }
         @Override
         public void run() {
             while (!shutdownThread) {
@@ -244,9 +254,11 @@ public class UDPMulticastSendReceive implements IUDPNetwork {
                         Log.w(TAG, "send data II " + String.valueOf(sendPacket.getLength()) + " " + String.valueOf(sendPacket.getPort()) + " " + sendPacket.getAddress().toString());
                         socket.send(sendPacket);
                     }
-                } catch (InterruptedException | IOException e) {
+                } catch (IOException e) {
                     if (!shutdownThread)
                         e.printStackTrace();
+                } catch (InterruptedException e) {
+                    return;
                 }
             }
         }

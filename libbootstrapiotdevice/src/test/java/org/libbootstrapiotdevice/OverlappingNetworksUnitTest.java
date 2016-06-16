@@ -38,7 +38,7 @@ public class OverlappingNetworksUnitTest {
             List<WirelessNetwork> networks1 = new ArrayList<>();
             networks1.add(net1);
             networks1.add(net2a);
-            testDevice1.updateState(DeviceMode.Bound, DeviceState.STATE_OK, networks1, "", new byte[0], new byte[0], 0);
+            testDevice1.updateState(DeviceMode.Bound, DeviceState.STATE_OK, networks1, "", new byte[0], new byte[0], 0, 0);
             networks.addDevice(testDevice1);
         }
 
@@ -47,7 +47,7 @@ public class OverlappingNetworksUnitTest {
             List<WirelessNetwork> networks1 = new ArrayList<>();
             networks1.add(net2b);
             networks1.add(net3);
-            testDevice1.updateState(DeviceMode.Bound, DeviceState.STATE_OK, networks1, "", new byte[0], new byte[0], 0);
+            testDevice1.updateState(DeviceMode.Bound, DeviceState.STATE_OK, networks1, "", new byte[0], new byte[0], 0, 0);
             networks.addDevice(testDevice1);
         }
 

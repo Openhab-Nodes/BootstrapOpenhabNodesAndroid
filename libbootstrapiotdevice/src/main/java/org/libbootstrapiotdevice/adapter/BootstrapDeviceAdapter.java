@@ -96,10 +96,14 @@ public class BootstrapDeviceAdapter extends RecyclerView.Adapter<BootstrapDevice
     public void onBindViewHolder(ViewHolder viewHolder, int position) {
         Context c = viewHolder.txtViewTitle.getContext();
         BootstrapDevice device = data.get(position);
-        viewHolder.txtViewTitle.setText(device.device_name);
+        if (device.isValid())
+            viewHolder.txtViewTitle.setText(device.device_name);
+        else
+            viewHolder.txtViewTitle.setText(c.getString(R.string.device_wait_for_data));
         viewHolder.txtViewTitle.setTag(position);
         if (selectionEnabled) {
             onBind = true;
+            viewHolder.getCheckbox().setEnabled(device.isValid() && !device.isAlreadyBound());
             viewHolder.getCheckbox().setChecked(device.isSelected());
             if (device.getMode() == DeviceMode.Bound)
                 viewHolder.txtSubTitle.setText(c.getString(R.string.device_entry_bound,device.uid));
@@ -107,7 +111,11 @@ public class BootstrapDeviceAdapter extends RecyclerView.Adapter<BootstrapDevice
                 viewHolder.txtSubTitle.setText(device.uid);
             onBind = false;
         } else {
-            viewHolder.txtSubTitle.setText(DeviceState.toString(c, device.getState()));
+            DeviceState state = device.getState();
+            if (state != DeviceState.STATE_OK)
+                viewHolder.txtSubTitle.setText(DeviceState.toString(c, state));
+            else
+                viewHolder.txtSubTitle.setText(DeviceMode.toString(c, device.getMode(), device.getErrorMessage()));
         }
 
         WirelessNetwork network = device.getWirelessNetwork();
@@ -115,7 +123,7 @@ public class BootstrapDeviceAdapter extends RecyclerView.Adapter<BootstrapDevice
             viewHolder.imgViewIcon.setVisibility(View.INVISIBLE);
         else {
             viewHolder.imgViewIcon.setVisibility(View.VISIBLE);
-            viewHolder.imgViewIcon.setImageDrawable(d[network.strength * 6 / 100]);
+            viewHolder.imgViewIcon.setImageDrawable(d[network.strength * (d.length - 1) / 100]);
         }
     }
 
